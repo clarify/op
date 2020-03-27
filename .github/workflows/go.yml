@@ -1,0 +1,57 @@
+name: Go
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v1
+
+    - name: Setup modules cache
+      id: cache-go-module
+      uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      if: steps.cache-go-module.outputs.cache-hit != 'true'
+      run: go mod download
+
+    - name: Test
+      run: go test -v -race ./...
+
+    - name: Go tools cache
+      id: cache-go-tools
+      uses: actions/cache@v1
+      with:
+        path: ~/go/bin
+        key: v1-${{ runner.os }}-tools
+        restore-keys: |
+          v1-${{ runner.os }}-tools
+
+    - name: Install tools
+      if: steps.cache-go-tools.outputs.cache-hit != 'true'
+      run: |
+        set -e
+        mkdir -p "$(go env GOPATH)/bin"
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.23.1
+
+    - name: Lint
+      run: '"$(go env GOPATH)/bin/golangci-lint" run --enable=golint ./...'
