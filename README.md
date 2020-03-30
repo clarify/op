@@ -1,15 +1,10 @@
-# template-go [![GitHub Actions](https://github.com/searis/template-go/workflows/Go/badge.svg?branch=master)](https://github.com/searis/template-go/actions?query=workflow%3AGo+branch%3Amaster)
+# Operation [![GitHub Actions](https://github.com/searis/template-go/workflows/Go/badge.svg?branch=master)](https://github.com/searis/template-go/actions?query=workflow%3AGo+branch%3Amaster) [![GoDev](https://img.shields.io/static/v1?label=go.dev&message=reference&color=blue)](https://pkg.go.dev/github.com/searis/op)
 
-A template repository for Go projects.
+The Operation package provides utilities for controlling go-routines and the program run-time by use of [context](https://golang.org/pkg/context). It is built-up by the following main concepts:
 
-Public repositories with a relevant LICENCE file can have a go.dev link:
-```
-[![GoDev](https://img.shields.io/static/v1?label=go.dev&message=reference&color=blue)](https://pkg.go.dev/<import-path>)
-```
+- `SignalContext`: Listen for signals to cancel context, retrieve exit code hints.
+- `Operations`: Manage/wait for a single go-routine.
+- `Handler`: Manage multiple named operations, insert operation key(s) to context.
+- `MiddlewareFunc`: Can be passed to a single Operation or to a Handler.
 
-The repository contains:
-- An example Go module with one dependency and one test.
-- Example badges.
-- An [editorconfig](https://editorconfig.org/) file.
-- A [GitHub Actions](https://github.com/features/actions) workflow for Go.
-- A .gitignore file.
+See [Full Application example](/examples/full-program/main.go).
