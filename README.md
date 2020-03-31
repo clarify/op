@@ -1,4 +1,4 @@
-# Operation [![GitHub Actions](https://github.com/searis/template-go/workflows/Go/badge.svg?branch=master)](https://github.com/searis/template-go/actions?query=workflow%3AGo+branch%3Amaster) [![GoDev](https://img.shields.io/static/v1?label=go.dev&message=reference&color=blue)](https://pkg.go.dev/github.com/searis/op)
+# Operation [![GitHub Actions](https://github.com/searis/op/workflows/Go/badge.svg?branch=master)](https://github.com/searis/op/actions?query=workflow%3AGo+branch%3Amaster) [![GoDev](https://img.shields.io/static/v1?label=go.dev&message=reference&color=blue)](https://pkg.go.dev/github.com/searis/op)
 
 The Operation package provides utilities for controlling go-routines and the program run-time by use of [context](https://golang.org/pkg/context). It is built-up by the following main concepts:
 
