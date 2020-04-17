@@ -14,6 +14,12 @@ const (
 	opKey ctxKey = 0
 )
 
+// CancelFunc is a function that cancel a running context before returning an
+// os.Signal if one has been received. After being called once, the function
+// will continue to return the same response. Multiple concurrent calls are
+// safe.
+type CancelFunc = func() os.Signal
+
 // closedchan is a reusable closed channel.
 var closedchan = make(chan struct{})
 
@@ -21,92 +27,47 @@ func init() {
 	close(closedchan)
 }
 
-// SignalContext is a context.Context implementation that is canceled when the
-// program recives a signal.
-type SignalContext struct {
-	context.Context
-
-	mu     sync.Mutex
-	done   chan struct{}
-	signal os.Signal
-}
-
-// ProgramContext is a short-hand for ContextWithCancelSignals(
-// context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT).
-func ProgramContext() *SignalContext {
-	return ContextWithCancelSignals(
-		context.Background(),
-		os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT,
-	)
-}
-
-// ContextWithCancelSignals returns a context that listens for the passed in
-// signals, and gets canceled once the first signal is received.
-func ContextWithCancelSignals(parent context.Context, signals ...os.Signal) *SignalContext {
+// ProgramContext returns a context that is canceled if one of the following
+// signals are received by the program: os.Interrupt, syscall.SIGTERM,
+// syscall.SIGQUIT. This is equivalent to passing a channel of size 1 to
+// ContextWithCancelSignals that is notified by the same signals.
+func ProgramContext() (context.Context, CancelFunc) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, signals...)
-	parent, cancel := context.WithCancel(parent)
-	ctx := &SignalContext{Context: parent}
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+	return ContextWithCancelSignals(context.Background(), c)
+}
+
+// ContextWithCancelSignals returns a context that is cancelled when a signal
+// is received on c (or if c is closed).
+func ContextWithCancelSignals(parent context.Context, c <-chan os.Signal) (context.Context, CancelFunc) {
+	ctx, cancel := context.WithCancel(parent)
+
+	var mu sync.Mutex
+	var s os.Signal
+
+	// Lock signal retrival until we can confirm that s will no longer be
+	// modified.
+	mu.Lock()
 	go func() {
+		defer mu.Unlock()
+
+		// Run until signal received or the (parent) context is canceled.
 		select {
-		case <-parent.Done():
-			ctx.mu.Lock()
-			if ctx.done == nil {
-				ctx.done = closedchan
-			} else {
-				close(ctx.done)
-			}
-			cancel() // Possibly redundant.
-			ctx.mu.Unlock()
-		case s := <-c:
-			ctx.mu.Lock()
-			ctx.signal = s
-			if ctx.done == nil {
-				ctx.done = closedchan
-			} else {
-				close(ctx.done)
-			}
-			cancel() // Needed to proagate cancel to children.
-			ctx.mu.Unlock()
+		case <-ctx.Done():
+		case s = <-c:
+			cancel()
 		}
 	}()
-	return ctx
-}
 
-// Signal returns nil if Done is not yet closed. If Done is closed due to a
-// received signal, the received signal is returned.
-func (ctx *SignalContext) Signal() os.Signal {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-
-	return ctx.signal
-}
-
-// ExitCodeHint returns an exit code hint according to the signal in context and
-// received error. The exit code follows UNIX conventions.
-func (ctx *SignalContext) ExitCodeHint(err error) int {
-	if err == nil {
-		return 0
+	// f will cancel ctx and return the value of s.
+	f := func() os.Signal {
+		cancel()
+		mu.Lock()
+		defer mu.Unlock()
+		return s
 	}
 
-	s := ctx.Signal()
-	switch st := s.(type) {
-	case syscall.Signal:
-		return 128 + int(st)
-	default:
-		return 1
-	}
-}
-
-// Done returns a channel that is closed when the context is canceled.
-func (ctx *SignalContext) Done() <-chan struct{} {
-	ctx.mu.Lock()
-	defer ctx.mu.Unlock()
-
-	if ctx.done == nil {
-		ctx.done = make(chan struct{})
-	}
-	return ctx.done
+	return ctx, f
 }
 
 // ContextKey returns a concatinated operation key from context. Operation keys
