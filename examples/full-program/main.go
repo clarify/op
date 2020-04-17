@@ -16,21 +16,22 @@ func main() {
 	p := mustParseProgram(os.Args[1:])
 
 	// Get a context that is automatically canceled when the program receives a
-	// termination signal
-	ctx := op.ProgramContext()
+	// termination signal.
+	ctx, cancel := op.ProgramContext()
 
 	// Run program and handle errors.
 	err := p.run(ctx)
+	sig := cancel()
 	switch {
 	case err == nil:
 		log.Printf("I! Program succeed")
-	case ctx.Signal() != nil:
+	case sig != nil:
 		log.Printf("E! Program aborted by user: %v", err)
 	default:
 		log.Printf("E! Program internal failure: %v", err)
 	}
 
-	os.Exit(ctx.ExitCodeHint(err))
+	os.Exit(op.ExitHint(sig, err))
 }
 
 type program struct {
