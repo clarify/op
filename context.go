@@ -70,7 +70,7 @@ func ContextWithCancelSignals(parent context.Context, c <-chan os.Signal) (conte
 	return ctx, f
 }
 
-// ContextKey returns a concatinated operation key from context. Operation keys
+// ContextKey returns a concatenated operation key from context. Operation keys
 // are added to context when an operation is started by a Handler. In the case
 // of nested operations, keys are joined by a single dot (.). If there are no
 // operation keys in context, an empty string is returned.
