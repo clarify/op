@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/searis/op"
+	"github.com/clarify/op"
 )
 
 func main() {
